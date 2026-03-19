@@ -22,6 +22,40 @@ Route::get('/livewire/livewire.min.js.map', function () {
     return response()->file($path, ['Content-Type' => 'application/json']);
 })->name('livewire.js.map');
 
+// ── Admin Login (HTML puro, sem Livewire) ────────────────────────
+Route::get('/admin/login', function () {
+    if (auth()->check() && auth()->user()->hasRole('admin')) {
+        return redirect('/admin');
+    }
+    return view('filament.pages.auth.login');
+})->name('filament.admin.auth.login.show')->middleware('guest');
+
+Route::post('/admin/login', function (\Illuminate\Http\Request $request) {
+    $credentials = $request->validate([
+        'email'    => ['required', 'email'],
+        'password' => ['required'],
+    ]);
+
+    if (!\Illuminate\Support\Facades\Auth::attempt($credentials, $request->boolean('remember'))) {
+        return back()
+            ->withInput($request->only('email'))
+            ->withErrors(['email' => 'Credenciais inválidas.']);
+    }
+
+    $user = auth()->user();
+
+    if (!$user->hasRole('admin')) {
+        \Illuminate\Support\Facades\Auth::logout();
+        return back()
+            ->withInput($request->only('email'))
+            ->withErrors(['email' => 'Você não tem permissão para acessar o painel.']);
+    }
+
+    $request->session()->regenerate();
+
+    return redirect()->intended('/admin');
+})->name('filament.admin.auth.login')->middleware('web');
+
 // ── Melhor Envio OAuth ────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/melhorenvio/auth', function () {
