@@ -68,6 +68,8 @@ COPY . .
 # Laravel bootstrap
 RUN php artisan package:discover --ansi || true
 
+
+
 # Criar diretórios necessários
 RUN mkdir -p \
     storage/framework/sessions \
