@@ -78,6 +78,10 @@ fi
 # Storage link
 php artisan storage:link 2>/dev/null || true
 
+# Publica assets do Livewire e Filament
+php artisan livewire:publish --assets --force 2>/dev/null || true
+php artisan filament:assets 2>/dev/null || true
+
 # Caches
 php artisan config:clear
 php artisan route:clear
