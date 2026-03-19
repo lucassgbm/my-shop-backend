@@ -4,6 +4,24 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => response()->json(['api' => 'StreetFit API', 'version' => '2.0']));
 
+// Serve o livewire.js diretamente do vendor (resolve 404 em filesystem efêmero)
+Route::get('/livewire/livewire.js', function () {
+    $path = base_path('vendor/livewire/livewire/dist/livewire.esm.js');
+    if (!file_exists($path)) {
+        $path = base_path('vendor/livewire/livewire/dist/livewire.js');
+    }
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    return response()->file($path, ['Content-Type' => 'application/javascript']);
+})->name('livewire.js');
+
+Route::get('/livewire/livewire.min.js.map', function () {
+    $path = base_path('vendor/livewire/livewire/dist/livewire.min.js.map');
+    if (!file_exists($path)) abort(404);
+    return response()->file($path, ['Content-Type' => 'application/json']);
+})->name('livewire.js.map');
+
 // ── Melhor Envio OAuth ────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/melhorenvio/auth', function () {
