@@ -68,6 +68,10 @@ COPY . .
 # Laravel bootstrap
 RUN php artisan package:discover --ansi || true
 
+# Publica assets do Livewire e Filament sem precisar de .env
+# (roda direto via PHP, copia do vendor para public)
+RUN php publish-assets.php
+
 
 
 # Criar diretórios necessários

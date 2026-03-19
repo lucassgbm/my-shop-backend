@@ -4,23 +4,37 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => response()->json(['api' => 'StreetFit API', 'version' => '2.0']));
 
-// Serve o livewire.js diretamente do vendor (resolve 404 em filesystem efêmero)
+
+// ── Livewire JS (fallback se o arquivo não existir no public/) ───
 Route::get('/livewire/livewire.js', function () {
-    $path = base_path('vendor/livewire/livewire/dist/livewire.esm.js');
-    if (!file_exists($path)) {
-        $path = base_path('vendor/livewire/livewire/dist/livewire.js');
+    // Primeiro tenta o arquivo publicado
+    $public = public_path('livewire/livewire.esm.js');
+    if (file_exists($public)) {
+        return response()->file($public, ['Content-Type' => 'application/javascript']);
     }
-    if (!file_exists($path)) {
-        abort(404);
+    // Fallback: serve direto do vendor
+    foreach ([
+        base_path('vendor/livewire/livewire/dist/livewire.esm.js'),
+        base_path('vendor/livewire/livewire/dist/livewire.js'),
+    ] as $path) {
+        if (file_exists($path)) {
+            return response()->file($path, ['Content-Type' => 'application/javascript']);
+        }
     }
-    return response()->file($path, ['Content-Type' => 'application/javascript']);
-})->name('livewire.js');
+    abort(404, 'livewire.js not found');
+});
 
 Route::get('/livewire/livewire.min.js.map', function () {
-    $path = base_path('vendor/livewire/livewire/dist/livewire.min.js.map');
-    if (!file_exists($path)) abort(404);
-    return response()->file($path, ['Content-Type' => 'application/json']);
-})->name('livewire.js.map');
+    foreach ([
+        public_path('livewire/livewire.min.js.map'),
+        base_path('vendor/livewire/livewire/dist/livewire.min.js.map'),
+    ] as $path) {
+        if (file_exists($path)) {
+            return response()->file($path, ['Content-Type' => 'application/json']);
+        }
+    }
+    abort(404);
+});
 
 // ── Admin Login (HTML puro, sem Livewire) ────────────────────────
 Route::get('/admin/login', function () {
