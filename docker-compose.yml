@@ -1,0 +1,56 @@
+services:
+
+  # ── Laravel API ───────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streetfit_api
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      APP_NAME: StreetFit
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      APP_KEY: ${APP_KEY}
+
+      DB_CONNECTION: pgsql
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSL: ${DB_SSL:-true}
+
+      CACHE_DRIVER: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      FILESYSTEM_DISK: public
+
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:3000}
+      SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+
+      MP_PUBLIC_KEY: ${MP_PUBLIC_KEY}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+
+      ME_CLIENT_ID: ${ME_CLIENT_ID}
+      ME_CLIENT_SECRET: ${ME_CLIENT_SECRET}
+      ME_REDIRECT_URI: ${ME_REDIRECT_URI}
+      ME_POSTAL_CODE: ${ME_POSTAL_CODE}
+      ME_SANDBOX: ${ME_SANDBOX:-true}
+    volumes:
+      - storage_data:/var/www/html/storage/app/public
+    networks:
+      - streetfit
+
+volumes:
+  storage_data:
+    driver: local
+
+networks:
+  streetfit:
+    driver: bridge
