@@ -36,16 +36,9 @@ Route::post('/coupons/validate',       [CouponController::class, 'validate']);
 // ── Rotas autenticadas ────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Carrinho
-    Route::prefix('cart')->group(function () {
-        Route::get('/',              [CartController::class, 'index']);
-        Route::post('/items',        [CartController::class, 'addItem']);
-        Route::put('/items/{id}',    [CartController::class, 'updateItem']);
-        Route::delete('/items/{id}', [CartController::class, 'removeItem']);
-        Route::post('/coupon',       [CartController::class, 'applyCoupon']);
-        Route::delete('/coupon',     [CartController::class, 'removeCoupon']);
-        Route::get('/summary',       [CartController::class, 'summary']);
-    });
+    // Carrinho (stateless — gerenciado pelo frontend)
+    Route::post('/cart/summary',          [CartController::class, 'summary']);
+    Route::post('/cart/coupon/validate',  [CartController::class, 'validateCoupon']);
 
     // Checkout
     Route::prefix('checkout')->group(function () {

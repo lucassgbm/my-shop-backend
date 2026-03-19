@@ -32,7 +32,7 @@ class UserResource extends Resource
                 Forms\Components\TextInput::make('password')->label('Senha')->password()
                     ->dehydrateStateUsing(fn($s) => filled($s) ? Hash::make($s) : null)
                     ->dehydrated(fn($s) => filled($s))
-                    ->required(fn(string $op) => $op === 'create')->minLength(8)
+                    ->required(fn(string $operation) => $operation === 'create')->minLength(8)
                     ->helperText('Deixe em branco para manter.'),
                 Forms\Components\Select::make('roles')->relationship('roles','name')->multiple()->preload()->label('Perfil'),
             ])->columns(2),

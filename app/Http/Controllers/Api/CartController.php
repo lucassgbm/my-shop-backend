@@ -11,125 +11,87 @@ use Illuminate\Http\JsonResponse;
 
 class CartController extends Controller
 {
-    private function getCart(Request $request): array
-    {
-        return session('cart', ['items' => [], 'coupon' => null]);
-    }
-
-    private function saveCart(Request $request, array $cart): void
-    {
-        session(['cart' => $cart]);
-    }
-
-    public function index(Request $request): JsonResponse
-    {
-        return response()->json($this->buildSummary($this->getCart($request)));
-    }
-
-    public function addItem(Request $request): JsonResponse
+    /**
+     * Valida e recalcula o carrinho recebido do frontend.
+     * Carrinho é gerenciado pelo Zustand — backend só valida preços e cupons.
+     */
+    public function summary(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'product_id'  => 'required|exists:products,id',
-            'variant_id'  => 'nullable|exists:product_variants,id',
-            'quantity'    => 'required|integer|min:1|max:10',
+            'items'              => 'required|array',
+            'items.*.key'        => 'required|string',
+            'items.*.product_id' => 'required|integer',
+            'items.*.variant_id' => 'nullable|integer',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'coupon_code'        => 'nullable|string',
         ]);
 
-        $product = Product::findOrFail($data['product_id']);
-        $variant = $data['variant_id'] ? ProductVariant::findOrFail($data['variant_id']) : null;
+        $items    = [];
+        $subtotal = 0;
 
-        $cart  = $this->getCart($request);
-        $key   = $data['product_id'] . '-' . ($data['variant_id'] ?? '0');
-        $price = $variant?->price ?? $product->price;
+        foreach ($data['items'] as $item) {
+            $product = Product::find($item['product_id']);
+            if (!$product || !$product->is_active) continue;
 
-        if (isset($cart['items'][$key])) {
-            $cart['items'][$key]['quantity'] += $data['quantity'];
-        } else {
-            $cart['items'][$key] = [
-                'key'        => $key,
+            $variant = $item['variant_id'] ? ProductVariant::find($item['variant_id']) : null;
+            $price   = (float) ($variant?->price ?? $product->price);
+            $qty     = (int) $item['quantity'];
+
+            $items[] = [
+                'key'        => $item['key'],
                 'product_id' => $product->id,
                 'variant_id' => $variant?->id,
                 'name'       => $product->name,
                 'size'       => $variant?->size,
                 'image'      => $product->primary_thumb_url,
                 'price'      => $price,
-                'quantity'   => $data['quantity'],
+                'quantity'   => $qty,
             ];
+
+            $subtotal += $price * $qty;
         }
 
-        $this->saveCart($request, $cart);
-        return response()->json($this->buildSummary($cart));
-    }
+        $discount = 0;
+        $coupon   = null;
 
-    public function updateItem(Request $request, string $id): JsonResponse
-    {
-        $data = $request->validate(['quantity' => 'required|integer|min:0|max:10']);
-        $cart = $this->getCart($request);
-
-        if ($data['quantity'] === 0) {
-            unset($cart['items'][$id]);
-        } elseif (isset($cart['items'][$id])) {
-            $cart['items'][$id]['quantity'] = $data['quantity'];
+        if (!empty($data['coupon_code'])) {
+            $couponModel = Coupon::where('code', strtoupper($data['coupon_code']))->first();
+            if ($couponModel && $couponModel->isValid()) {
+                $discount = $couponModel->calculateDiscount($subtotal);
+                $coupon   = [
+                    'id'    => $couponModel->id,
+                    'code'  => $couponModel->code,
+                    'type'  => $couponModel->type,
+                    'value' => $couponModel->value,
+                ];
+            }
         }
 
-        $this->saveCart($request, $cart);
-        return response()->json($this->buildSummary($cart));
+        return response()->json([
+            'items'    => $items,
+            'coupon'   => $coupon,
+            'subtotal' => round($subtotal, 2),
+            'discount' => round($discount, 2),
+            'total'    => round($subtotal - $discount, 2),
+            'count'    => collect($items)->sum('quantity'),
+        ]);
     }
 
-    public function removeItem(Request $request, string $id): JsonResponse
+    public function validateCoupon(Request $request): JsonResponse
     {
-        $cart = $this->getCart($request);
-        unset($cart['items'][$id]);
-        $this->saveCart($request, $cart);
-        return response()->json($this->buildSummary($cart));
-    }
+        $request->validate(['code' => 'required|string', 'subtotal' => 'required|numeric']);
 
-    public function applyCoupon(Request $request): JsonResponse
-    {
-        $request->validate(['code' => 'required|string']);
         $coupon = Coupon::where('code', strtoupper($request->code))->first();
 
         if (!$coupon || !$coupon->isValid()) {
             return response()->json(['error' => 'Cupom inválido ou expirado.'], 422);
         }
 
-        $cart = $this->getCart($request);
-        $cart['coupon'] = ['id' => $coupon->id, 'code' => $coupon->code, 'type' => $coupon->type, 'value' => $coupon->value];
-        $this->saveCart($request, $cart);
-
-        return response()->json($this->buildSummary($cart));
-    }
-
-    public function removeCoupon(Request $request): JsonResponse
-    {
-        $cart = $this->getCart($request);
-        $cart['coupon'] = null;
-        $this->saveCart($request, $cart);
-        return response()->json($this->buildSummary($cart));
-    }
-
-    public function summary(Request $request): JsonResponse
-    {
-        return response()->json($this->buildSummary($this->getCart($request)));
-    }
-
-    public function buildSummary(array $cart): array
-    {
-        $items    = array_values($cart['items'] ?? []);
-        $subtotal = collect($items)->sum(fn($i) => $i['price'] * $i['quantity']);
-        $discount = 0;
-
-        if (!empty($cart['coupon'])) {
-            $coupon   = Coupon::find($cart['coupon']['id']);
-            $discount = $coupon ? $coupon->calculateDiscount($subtotal) : 0;
-        }
-
-        return [
-            'items'    => $items,
-            'coupon'   => $cart['coupon'] ?? null,
-            'subtotal' => round($subtotal, 2),
-            'discount' => round($discount, 2),
-            'total'    => round($subtotal - $discount, 2),
-            'count'    => collect($items)->sum('quantity'),
-        ];
+        return response()->json([
+            'code'     => $coupon->code,
+            'type'     => $coupon->type,
+            'value'    => $coupon->value,
+            'discount' => $coupon->calculateDiscount($request->subtotal),
+        ]);
     }
 }
