@@ -42,7 +42,13 @@ Route::get('/admin/login', function () {
         return redirect('/admin');
     }
     return view('filament.pages.auth.login');
-})->name('filament.admin.auth.login.show')->middleware('guest');
+})->name('filament.admin.auth.login.show')
+ ->middleware('guest');
+
+// Alias necessário para o middleware de auth do Laravel
+Route::get('/admin/login-redirect', function () {
+    return redirect()->route('filament.admin.auth.login.show');
+})->name('login');
 
 Route::post('/admin/login', function (\Illuminate\Http\Request $request) {
     $credentials = $request->validate([
