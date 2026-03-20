@@ -12,7 +12,9 @@ if echo "$APP_URL" | grep -q "^http://"; then
 fi
 
 # Permissões do storage
-chmod -R 777 storage bootstrap/cache 2>/dev/null || true
+mkdir -p storage/logs storage/framework/sessions storage/framework/views storage/framework/cache bootstrap/cache
+chmod -R 777 storage bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache
 
 # Aguarda o banco via PHP/PDO
 echo "⏳ Aguardando banco de dados..."

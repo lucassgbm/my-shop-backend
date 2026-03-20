@@ -83,9 +83,10 @@ RUN mkdir -p \
     bootstrap/cache
 
 # Permissões
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 storage \
-    && chmod -R 755 bootstrap/cache
+RUN mkdir -p storage/logs storage/framework/sessions storage/framework/views storage/framework/cache bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 777 storage \
+    && chmod -R 777 bootstrap/cache
 
 # Configs
 COPY docker/nginx.conf       /etc/nginx/nginx.conf
