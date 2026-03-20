@@ -73,7 +73,7 @@ Route::middleware(['web', 'auth'])->group(function () {
             'client_id'     => config('services.melhorenvio.client_id'),
             'redirect_uri'  => config('services.melhorenvio.redirect_uri'),
             'response_type' => 'code',
-            'scope'         => 'cart-read cart-write orders-read orders-write shipping-calculate shipping-tracking',
+            'scope'         => 'cart-read cart-write shipping-calculate shipping-tracking',
         ]);
         return redirect("{$baseUrl}/oauth/authorize?{$query}");
     })->name('melhorenvio.auth');
